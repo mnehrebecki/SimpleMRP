@@ -1,0 +1,94 @@
+import json
+from anytree import Node, RenderTree, LevelOrderIter
+from anytree.importer import DictImporter, JsonImporter
+import math
+
+importer = DictImporter()
+
+
+def get_all_values(nested_dict):
+    for key, value in nested_dict.items():
+        if type(value) is dict:
+            print(key)
+            get_all_values(value)
+        else:
+            print(key, ":", value)
+
+
+def open_files(filename):
+    with open(filename) as f_obj:
+        values = json.load(f_obj)
+        return values
+
+
+mpsfile = 'mps.json'
+bomfile = 'bom.json'
+planParamFile = 'planningparameters.json'
+
+mps = open_files(mpsfile)
+bom = open_files(bomfile)
+planParam = open_files(planParamFile)
+root = importer.import_(bom)
+
+print(RenderTree(root))
+
+i = 0
+prod = []
+parentPU = {}
+lt = 2  # czas realizacji
+foq = 30  # stala wielkosc partii
+poq = 2  # wielkość uruchomienia musi wystarczać na zapotrzebowanie na najbliższe 2 dni
+
+
+for node in LevelOrderIter(root):
+    print(node.name)
+    prod = mps.get(node.name)
+    prodParam = planParam.get(node.name)
+    lt = prodParam.get("lt")
+    foq = prodParam.get("foq")
+    poq = prodParam.get("poq")
+    lfl = prodParam.get("lfl")
+    PB = prod.get("PB")
+    SZ = [0] * len(PB)
+    PN = [0] * len(PB)
+    PP = [0] * len(PB)
+    PU = [0] * len(PB)
+    SZ[0] = 30
+    newPB = [0] * len(PB)
+    if node.parent:
+        tempPU = parentPU.get(node.parent.name)
+        newPB = [i * node.q for i in tempPU]
+        newList = [a + b for a, b in zip(PB, newPB)]
+        PB = newList.copy()
+
+    for k in range(len(PB)):
+        if PB[k] == 0:
+            if k + 1 < len(PB):
+                SZ[k + 1] = SZ[k]
+        else:
+            if SZ[k - 1] - PB[k] < 0:
+                PN[k] = PB[k] - SZ[k - 1]
+                if foq:
+                    x = math.ceil(PB[k] / foq)
+                    PU[k - lt] = foq * x
+                if lfl:
+                    PU[k - lt] = PN[k]
+                if poq:
+                    PU[k - lt] = PN[k] + sum(i for i in PB[k + 1:k + poq])
+                PP[k] = PU[k - lt]
+                SZ[k] = SZ[k - 1] + PP[k] - PB[k]
+                SZ[k + 1] = SZ[k]
+            else:
+                SZ[k] = SZ[k - 1] - PB[k]
+                if k + 1 < len(PB):
+                    SZ[k + 1] = SZ[k]
+
+    parentPU.update({node.name: PU})
+    print(PB)
+    print(SZ)
+    print(PN)
+    print(PP)
+    print(PU)
+    print("-----")
+print("Obliczone PU")
+get_all_values(parentPU)

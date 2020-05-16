@@ -1,0 +1,14 @@
+{
+    "A": {
+        "lt": 2, "foq" : 40, "poq" : 0, "lfl": false
+    },
+    "B": {
+        "lt": 2, "foq" : 0, "poq" : 10, "lfl": false
+    },
+    "C": {
+        "lt": 2, "foq" : 30, "poq" : 0, "lfl": false
+    },
+    "D": {
+        "lt": 1, "foq" : 0, "poq" : 0, "lfl": true
+    }
+}

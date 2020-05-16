@@ -1,0 +1,5 @@
+{
+    "name": "A", "q": 1,
+    "children": [{"name": "B", "q": 2,
+                  "children": [{"name": "C", "q": 2}]},
+                 {"name": "D", "q": 1}]}
