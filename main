@@ -21,39 +21,37 @@ def open_files(filename):
         return values
 
 
-mpsfile = 'mps.json'
-bomfile = 'bom.json'
-planParamFile = 'planningparameters.json'
+mpsFile = 'mps.json'
+bomFile = 'bom.json'
+planParamFile = 'planningParameters.json'
+inventoryFile = 'inventory.json'
 
-mps = open_files(mpsfile)
-bom = open_files(bomfile)
+mps = open_files(mpsFile)
+bom = open_files(bomFile)
 planParam = open_files(planParamFile)
-root = importer.import_(bom)
+inventory = open_files(inventoryFile)
+root = importer.import_(bom)  # wczytanie bom do struktury drzewa
 
 print(RenderTree(root))
 
 i = 0
 prod = []
 parentPU = {}
-lt = 2  # czas realizacji
-foq = 30  # stala wielkosc partii
-poq = 2  # wielkość uruchomienia musi wystarczać na zapotrzebowanie na najbliższe 2 dni
-
 
 for node in LevelOrderIter(root):
     print(node.name)
-    prod = mps.get(node.name)
-    prodParam = planParam.get(node.name)
-    lt = prodParam.get("lt")
-    foq = prodParam.get("foq")
-    poq = prodParam.get("poq")
-    lfl = prodParam.get("lfl")
+    prod = mps.get(node.name) # pobranie mps dla danego produktu
+    prodParam = planParam.get(node.name) # pobranie parametrów planistycznych danego produktu
+    lt = prodParam.get("lt")  # czas realizacji
+    foq = prodParam.get("foq")  # stala wielkosc partii
+    poq = prodParam.get("poq")  # wielkość uruchomienia musi wystarczać na zapotrzebowanie na najbliższe 2 dni
+    lfl = prodParam.get("lfl")  # partia na partię, czyli ile trzeba, tyle jest produkowane
     PB = prod.get("PB")
     SZ = [0] * len(PB)
     PN = [0] * len(PB)
     PP = [0] * len(PB)
     PU = [0] * len(PB)
-    SZ[0] = 30
+    SZ[0] = inventory.get(node.name)  # wczytanie SZ produktu
     newPB = [0] * len(PB)
     if node.parent:
         tempPU = parentPU.get(node.parent.name)
