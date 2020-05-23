@@ -32,14 +32,13 @@ planParam = open_files(planParamFile)
 inventory = open_files(inventoryFile)
 root = importer.import_(bom)  # wczytanie bom do struktury drzewa
 
+print("Struktura produktu wczytana z BOM")
 print(RenderTree(root))
 
-i = 0
 prod = []
 parentPU = {}
 
 for node in LevelOrderIter(root):
-    print(node.name)
     prod = mps.get(node.name) # pobranie mps dla danego produktu
     prodParam = planParam.get(node.name) # pobranie parametrów planistycznych danego produktu
     lt = prodParam.get("lt")  # czas realizacji
@@ -47,12 +46,14 @@ for node in LevelOrderIter(root):
     poq = prodParam.get("poq")  # wielkość uruchomienia musi wystarczać na zapotrzebowanie na najbliższe 2 dni
     lfl = prodParam.get("lfl")  # partia na partię, czyli ile trzeba, tyle jest produkowane
     PB = prod.get("PB")
+    PD = prod.get("PD")
     SZ = [0] * len(PB)
     PN = [0] * len(PB)
     PP = [0] * len(PB)
     PU = [0] * len(PB)
     SZ[0] = inventory.get(node.name)  # wczytanie SZ produktu
     newPB = [0] * len(PB)
+    print("Produkt: " + node.name + ", parametry produkcji: " + str(prodParam))
     if node.parent:
         tempPU = parentPU.get(node.parent.name)
         newPB = [i * node.q for i in tempPU]
@@ -60,21 +61,22 @@ for node in LevelOrderIter(root):
         PB = newList.copy()
 
     for k in range(len(PB)):
+        SZ[k] += PD[k]
         if PB[k] == 0:
             if k + 1 < len(PB):
                 SZ[k + 1] = SZ[k]
         else:
             if SZ[k - 1] - PB[k] < 0:
-                PN[k] = PB[k] - SZ[k - 1]
+                PN[k] = PB[k] - SZ[k - 1] - PD[k]
                 if foq:
-                    x = math.ceil(PB[k] / foq)
+                    x = math.ceil(PN[k] / foq)
                     PU[k - lt] = foq * x
                 if lfl:
                     PU[k - lt] = PN[k]
                 if poq:
                     PU[k - lt] = PN[k] + sum(i for i in PB[k + 1:k + poq])
                 PP[k] = PU[k - lt]
-                SZ[k] = SZ[k - 1] + PP[k] - PB[k]
+                SZ[k] = SZ[k - 1] + PD[k] + PP[k] - PB[k]
                 SZ[k + 1] = SZ[k]
             else:
                 SZ[k] = SZ[k - 1] - PB[k]
@@ -82,11 +84,12 @@ for node in LevelOrderIter(root):
                     SZ[k + 1] = SZ[k]
 
     parentPU.update({node.name: PU})
-    print(PB)
-    print(SZ)
-    print(PN)
-    print(PP)
-    print(PU)
+    print("PB: ", PB)
+    print("PD: ", PD)
+    print("SZ: ", SZ)
+    print("PN: ", PN)
+    print("PP: ", PP)
+    print("PU: ", PU)
     print("-----")
 print("Obliczone PU")
 get_all_values(parentPU)
